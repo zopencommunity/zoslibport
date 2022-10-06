@@ -1,0 +1,37 @@
+export ZOPEN_GIT_URL="git@github.com:IgorTodorovskiIBM/zoslib.git"
+export ZOPEN_GIT_DEPS="git make cmake"
+export ZOPEN_GIT_BRANCH="zopen"
+export ZOPEN_TYPE="GIT"
+
+export ZOPEN_CONFIGURE="cmake"
+export ZOPEN_CONFIGURE_OPTS=". -DBUILD_TESTING=ON -DCMAKE_INSTALL_PREFIX=\$ZOPEN_INSTALL_DIR/ -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON"
+export ZOPEN_CONFIGURE_MINIMAL="yes"
+
+export LIBPATH="\$PWD/lib/:\$LIBPATH"
+export ZOPEN_CHECK="./test/cctest_a"
+
+export ZOPEN_INSTALL="cmake"
+export ZOPEN_INSTALL_OPTS="--install . --prefix \$ZOPEN_INSTALL_DIR/"
+
+zopen_check_results()
+{
+  dir="$1"
+  pfx="$2"
+  chk="$1/$2_check.log"
+  totalTests="$(grep -c -E "\[ RUN" ${chk})"
+  success="$(grep -c -E "\[[ ]+ OK ]" ${chk})"
+  failures=$((totalTests-success))
+  
+
+  echo "actualFailures:$failures"
+  echo "totalTests:$totalTests"
+  echo "expectedFailures:0"
+}
+
+zopen_append_to_env()
+{
+cat <<ZZ
+export ZOPEN_EXTRA_CPPFLAGS="-isystem=\$PWD/include"
+export ZOPEN_EXTRA_LDFLAGS="-L\$PWD/lib -lzoslib"
+ZZ
+}
