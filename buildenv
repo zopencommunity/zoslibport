@@ -1,4 +1,4 @@
-export ZOPEN_GIT_URL="git@github.com:IgorTodorovskiIBM/zoslib.git"
+export ZOPEN_GIT_URL="https://github.com/IgorTodorovskiIBM/zoslib.git"
 export ZOPEN_GIT_DEPS="git make cmake"
 export ZOPEN_GIT_BRANCH="zopen"
 export ZOPEN_TYPE="GIT"
@@ -31,7 +31,17 @@ zopen_check_results()
 zopen_append_to_env()
 {
 cat <<ZZ
-export ZOPEN_EXTRA_CPPFLAGS="-isystem=\$PWD/include"
-export ZOPEN_EXTRA_LDFLAGS="-L\$PWD/lib -lzoslib"
+export ZOPEN_EXTRA_CPPFLAGS="\${ZOPEN_EXTRA_CPPFLAGS} -DZOSLIB_OVERRIDE_CLIB=1"
+export ZOPEN_EXTRA_CFLAGS="\${ZOPEN_EXTRA_CFLAGS} -I\$PWD/include"
+export ZOPEN_EXTRA_CXXFLAGS="\${ZOPEN_EXTRA_CXXFLAGS} -I\$PWD/include"
+export ZOPEN_EXTRA_LDFLAGS="\${ZOPEN_EXTRA_LDFLAGS} -L\$PWD/lib"
+export ZOPEN_EXTRA_LIBS="\${ZOPEN_EXTRA_LIBS} -lzoslib \$PWD/lib/CXXRT64.x"
 ZZ
+}
+
+zopen_post_install()
+{
+  install_dir=$1
+  # Needed for C compiles since this library contains C++ runtime code
+  cat "//'CEE.SCEELIB(CXXRT64)'" | dd conv=block cbs=80 > "$install_dir/lib/CXXRT64.x"
 }
