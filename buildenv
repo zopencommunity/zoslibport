@@ -44,4 +44,5 @@ zopen_post_install()
   install_dir=$1
   # Needed for C compiles since this library contains C++ runtime code
   cat "//'CEE.SCEELIB(CXXRT64)'" | dd conv=block cbs=80 > "$install_dir/lib/CXXRT64.x"
+  chtag -tc 1047 "$install_dir/lib/CXXRT64.x"
 }
