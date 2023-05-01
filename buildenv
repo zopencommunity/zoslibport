@@ -1,11 +1,11 @@
 export ZOPEN_GIT_URL="https://github.com/ibmruntimes/zoslib.git"
-export ZOPEN_GIT_DEPS="git make cmake"
+export ZOPEN_GIT_DEPS="make cmake git"
 export ZOPEN_GIT_BRANCH="zopen"
 export ZOPEN_TYPE="GIT"
 
 export ZOPEN_CONFIGURE="cmake"
 export ZOPEN_CONFIGURE_OPTS=". -DBUILD_TESTING=ON -DENABLE_STATIC_INIT=ON -DZOSLIB_GENERIC=ON -DCMAKE_INSTALL_PREFIX=\$ZOPEN_INSTALL_DIR/ -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON"
-export ZOPEN_CONFIGURE_MINIMAL="yes"
+export ZOPEN_MAKE_MINIMAL="yes"
 
 export LIBPATH="\$PWD/lib/:\$LIBPATH"
 export ZOPEN_CHECK="./test/cctest_a"
@@ -32,10 +32,13 @@ zopen_append_to_env()
 {
 cat <<ZZ
 export ZOPEN_EXTRA_CPPFLAGS="\${ZOPEN_EXTRA_CPPFLAGS} -DZOSLIB_OVERRIDE_CLIB=1"
-export ZOPEN_EXTRA_CFLAGS="\${ZOPEN_EXTRA_CFLAGS} -I\$PWD/include"
-export ZOPEN_EXTRA_CXXFLAGS="\${ZOPEN_EXTRA_CXXFLAGS} -I\$PWD/include"
+export ZOPEN_EXTRA_CFLAGS="\${ZOPEN_EXTRA_CFLAGS} -isystem \$PWD/include"
+export ZOPEN_EXTRA_CXXFLAGS="\${ZOPEN_EXTRA_CXXFLAGS} -isystem \$PWD/include"
 export ZOPEN_EXTRA_LDFLAGS="\${ZOPEN_EXTRA_LDFLAGS} -L\$PWD/lib"
-export ZOPEN_EXTRA_LIBS="\${ZOPEN_EXTRA_LIBS} -lzoslib \$PWD/lib/CXXRT64.x"
+export ZOPEN_EXTRA_LIBS="\${ZOPEN_EXTRA_LIBS} -lzoslib"
+if [[ "$ZOPEN_COMP" == "XL" ]]; then
+  export ZOPEN_EXTRA_LIBS="\${ZOPEN_EXTRA_LIBS} \$PWD/lib/CXXRT64.x"
+fi
 ZZ
 }
 
