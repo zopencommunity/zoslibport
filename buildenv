@@ -40,16 +40,16 @@ zopen_check_results()
 
 zopen_append_to_env()
 {
+  if [[ "$ZOPEN_COMP" == "XL" ]]; then
+    extra_libs="\$PWD/lib/CXXRT64.x"
+  fi
 cat <<ZZ
 if [ ! -z "\$ZOPEN_IN_ZOPEN_BUILD" ]; then
   export ZOPEN_EXTRA_CPPFLAGS="\${ZOPEN_EXTRA_CPPFLAGS} -DZOSLIB_OVERRIDE_CLIB=1"
   export ZOPEN_EXTRA_CFLAGS="\${ZOPEN_EXTRA_CFLAGS} -isystem \$PWD/include"
   export ZOPEN_EXTRA_CXXFLAGS="\${ZOPEN_EXTRA_CXXFLAGS} -isystem \$PWD/include"
   export ZOPEN_EXTRA_LDFLAGS="\${ZOPEN_EXTRA_LDFLAGS} -L\$PWD/lib"
-  export ZOPEN_EXTRA_LIBS="\${ZOPEN_EXTRA_LIBS} -lzoslib"
-  if [[ "$ZOPEN_COMP" == "XL" ]]; then
-    export ZOPEN_EXTRA_LIBS="\${ZOPEN_EXTRA_LIBS} \$PWD/lib/CXXRT64.x"
-  fi
+  export ZOPEN_EXTRA_LIBS="\${ZOPEN_EXTRA_LIBS} -lzoslib \$PWD/lib/celquopt.s.o $extra_libs"
 fi
 ZZ
 }
