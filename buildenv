@@ -40,16 +40,13 @@ zopen_check_results()
 
 zopen_append_to_env()
 {
-  if [[ "$ZOPEN_COMP" == "XL" ]]; then
-    extra_libs="\$PWD/lib/CXXRT64.x"
-  fi
 cat <<ZZ
 if [ ! -z "\$ZOPEN_IN_ZOPEN_BUILD" ]; then
   export ZOPEN_EXTRA_CPPFLAGS="\${ZOPEN_EXTRA_CPPFLAGS} -DZOSLIB_OVERRIDE_CLIB=1"
   export ZOPEN_EXTRA_CFLAGS="\${ZOPEN_EXTRA_CFLAGS} -isystem \$PWD/include"
   export ZOPEN_EXTRA_CXXFLAGS="\${ZOPEN_EXTRA_CXXFLAGS} -isystem \$PWD/include"
   export ZOPEN_EXTRA_LDFLAGS="\${ZOPEN_EXTRA_LDFLAGS} -L\$PWD/lib"
-  export ZOPEN_EXTRA_LIBS="\${ZOPEN_EXTRA_LIBS} -lzoslib \$PWD/lib/celquopt.s.o $extra_libs"
+  export ZOPEN_EXTRA_LIBS="\${ZOPEN_EXTRA_LIBS} -lzoslib \$PWD/lib/celquopt.s.o -lzoslib-supp"
 fi
 ZZ
 }
@@ -57,9 +54,28 @@ ZZ
 zopen_post_install()
 {
   install_dir=$1
+  # This is a nasty hack b/c zoslib uses C++ and many apps are C apps.
+  # Those apps need to link with the c++ rt b/c zoslib has c++ code.
   if [[ "$ZOPEN_COMP" == "XL" ]]; then
-    # Needed for C compiles since this library contains C++ runtime code
-    cat "//'CEE.SCEELIB(CXXRT64)'" | dd conv=block cbs=80 > "$install_dir/lib/CXXRT64.x"
-    chtag -tc 1047 "$install_dir/lib/CXXRT64.x"
+    libs=CXXRT64
+    sceelib="CEE.SCEELIB"
+  else
+    libs="CRTDQCXA CRTDQCXE CRTDQCXP CRTDQCXS CRTDQUNW CRTDQXLA"
+    tfn=$TMPDIR/empty.$$.o
+    touch $tfn
+    sceelib=$($CXX -### $TMPDIR/empty.$$.o 2>&1 |awk '{for (x=1; x<NF; x++) if ($x ~ /CRTDQUNW/) {sub(/^[^A-Z]*/,"",$x); sub(/\(.*/,"", $x); print $x; }}')
+    rm $tfn
   fi
+  (cd $install_dir/lib;
+  printf "%-80.80s" '*! IEWBIND INCLUDE' >side_deck_magic.x
+  rm -f libzoslib-supp.a
+  for l in ${libs}
+  do
+    cp -B "//'$sceelib($l)'" $l
+    cat side_deck_magic.x $l >$l.x
+    ar r $install_dir/lib/libzoslib-supp.a $l.x
+    rm $l $l.x
+  done
+  rm side_deck_magic.x
+  )
 }
