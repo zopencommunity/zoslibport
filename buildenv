@@ -56,11 +56,14 @@ zopen_post_install()
   install_dir=$1
   # This is a nasty hack b/c zoslib uses C++ and many apps are C apps.
   # Those apps need to link with the c++ rt b/c zoslib has c++ code.
-  if [[ "$ZOPEN_COMP" == "XL" ]]; then
+  if [[ "$ZOPEN_COMP" == "XLCLANG" ]]; then
     libs=CXXRT64
     sceelib="CEE.SCEELIB"
   else
     libs="CRTDQCXA CRTDQCXE CRTDQCXP CRTDQCXS CRTDQUNW CRTDQXLA"
+    if [ ! -d "$TMPDIR" ]; then
+      TMPDIR=/tmp
+    fi
     tfn=$TMPDIR/empty.$$.o
     touch $tfn
     sceelib=$($CXX -### $TMPDIR/empty.$$.o 2>&1 |awk '{for (x=1; x<NF; x++) if ($x ~ /CRTDQUNW/) {sub(/^[^A-Z]*/,"",$x); sub(/\(.*/,"", $x); print $x; }}')
