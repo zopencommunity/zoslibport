@@ -1,17 +1,27 @@
 export ZOPEN_GIT_URL="https://github.com/ibmruntimes/zoslib.git"
-export ZOPEN_GIT_DEPS="git make cmake"
+export ZOPEN_GIT_DEPS="make cmake git"
 export ZOPEN_GIT_BRANCH="zopen"
 export ZOPEN_TYPE="GIT"
 
 export ZOPEN_CONFIGURE="cmake"
-export ZOPEN_CONFIGURE_OPTS=". -DBUILD_TESTING=ON -DENABLE_STATIC_INIT=ON -DZOSLIB_GENERIC=ON -DCMAKE_INSTALL_PREFIX=\$ZOPEN_INSTALL_DIR/ -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON"
-export ZOPEN_CONFIGURE_MINIMAL="yes"
+export ZOPEN_CONFIGURE_OPTS="-B ../build  --install-prefix \$ZOPEN_INSTALL_DIR/ -DBUILD_TESTING=ON -DENABLE_STATIC_INIT=ON -DZOSLIB_GENERIC=ON -DCMAKE_INSTALL_PREFIX=\$ZOPEN_INSTALL_DIR/ -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON ."
+
+export ZOPEN_MAKE="cmake"
+export ZOPEN_MAKE_OPTS=" --build ../build --target all"
+export ZOPEN_MAKE_MINIMAL="yes"
 
 export LIBPATH="\$PWD/lib/:\$LIBPATH"
-export ZOPEN_CHECK="./test/cctest_a"
+export ZOPEN_CHECK="../build/test/cctest_a"
 
 export ZOPEN_INSTALL="cmake"
-export ZOPEN_INSTALL_OPTS="--install . --prefix \$ZOPEN_INSTALL_DIR/"
+export ZOPEN_INSTALL_OPTS="--install ../build"
+
+export ZOPEN_CLEAN=zoslib_clean
+
+zoslib_clean()
+{
+  rm -rf ../build
+}
 
 zopen_check_results()
 {
@@ -33,10 +43,10 @@ zopen_append_to_env()
 cat <<ZZ
 if [ ! -z "\$ZOPEN_IN_ZOPEN_BUILD" ]; then
   export ZOPEN_EXTRA_CPPFLAGS="\${ZOPEN_EXTRA_CPPFLAGS} -DZOSLIB_OVERRIDE_CLIB=1"
-  export ZOPEN_EXTRA_CFLAGS="\${ZOPEN_EXTRA_CFLAGS} -fgnu-keywords -I\$PWD/include"
-  export ZOPEN_EXTRA_CXXFLAGS="\${ZOPEN_EXTRA_CXXFLAGS} -fgnu-keywords -I\$PWD/include"
+  export ZOPEN_EXTRA_CFLAGS="\${ZOPEN_EXTRA_CFLAGS} -isystem \$PWD/include"
+  export ZOPEN_EXTRA_CXXFLAGS="\${ZOPEN_EXTRA_CXXFLAGS} -isystem \$PWD/include"
   export ZOPEN_EXTRA_LDFLAGS="\${ZOPEN_EXTRA_LDFLAGS} -L\$PWD/lib"
-  export ZOPEN_EXTRA_LIBS="\${ZOPEN_EXTRA_LIBS} -lzoslib \$PWD/lib/CXXRT64.x \$PWD/lib/celquopt.s.o"
+  export ZOPEN_EXTRA_LIBS="\${ZOPEN_EXTRA_LIBS} -lzoslib \$PWD/lib/celquopt.s.o -lzoslib-supp"
 fi
 ZZ
 }
@@ -44,7 +54,31 @@ ZZ
 zopen_post_install()
 {
   install_dir=$1
-  # Needed for C compiles since this library contains C++ runtime code
-  cat "//'CEE.SCEELIB(CXXRT64)'" | dd conv=block cbs=80 > "$install_dir/lib/CXXRT64.x"
-  chtag -tc 1047 "$install_dir/lib/CXXRT64.x"
+  # This is a nasty hack b/c zoslib uses C++ and many apps are C apps.
+  # Those apps need to link with the c++ rt b/c zoslib has c++ code.
+  if [[ "$ZOPEN_COMP" == "XLCLANG" ]]; then
+    libs=CXXRT64
+    sceelib="CEE.SCEELIB"
+  else
+    libs="CRTDQCXA CRTDQCXE CRTDQCXP CRTDQCXS CRTDQUNW CRTDQXLA"
+    if [ ! -d "$TMPDIR" ]; then
+      TMPDIR=/tmp
+    fi
+    tfn=$TMPDIR/empty.$$.o
+    touch $tfn
+    sceelib=$($CXX -### $TMPDIR/empty.$$.o 2>&1 |awk '{for (x=1; x<NF; x++) if ($x ~ /CRTDQUNW/) {sub(/^[^A-Z]*/,"",$x); sub(/\(.*/,"", $x); print $x; }}')
+    rm $tfn
+  fi
+  (cd $install_dir/lib;
+  printf "%-80.80s" '*! IEWBIND INCLUDE' >side_deck_magic.x
+  rm -f libzoslib-supp.a
+  for l in ${libs}
+  do
+    cp -B "//'$sceelib($l)'" $l
+    cat side_deck_magic.x $l >$l.x
+    ar r $install_dir/lib/libzoslib-supp.a $l.x
+    rm $l $l.x
+  done
+  rm side_deck_magic.x
+  )
 }
