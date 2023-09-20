@@ -7,7 +7,7 @@ export ZOPEN_CONFIGURE="cmake"
 export ZOPEN_CONFIGURE_OPTS="-B ../build  --install-prefix \$ZOPEN_INSTALL_DIR/ -DBUILD_TESTING=ON -DENABLE_STATIC_INIT=ON -DZOSLIB_GENERIC=ON -DCMAKE_INSTALL_PREFIX=\$ZOPEN_INSTALL_DIR/ -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON ."
 
 export ZOPEN_MAKE="cmake"
-export ZOPEN_MAKE_OPTS=" --build ../build --target all"
+export ZOPEN_MAKE_OPTS=" --build ../build --parallel \$ZOPEN_NUM_JOBS --target all"
 export ZOPEN_MAKE_MINIMAL="yes"
 
 export LIBPATH="\$PWD/lib/:\$LIBPATH"
@@ -47,6 +47,13 @@ if [ ! -z "\$ZOPEN_IN_ZOPEN_BUILD" ]; then
   export ZOPEN_EXTRA_CXXFLAGS="\${ZOPEN_EXTRA_CXXFLAGS} -isystem \$PWD/include"
   export ZOPEN_EXTRA_LDFLAGS="\${ZOPEN_EXTRA_LDFLAGS} -L\$PWD/lib"
   export ZOPEN_EXTRA_LIBS="\${ZOPEN_EXTRA_LIBS} -lzoslib \$PWD/lib/celquopt.s.o -lzoslib-supp"
+  if [[ "\$ZOPEN_COMP" == "XLCLANG" ]]; then
+    export ZOPEN_EXTRA_CFLAGS="\${ZOPEN_EXTRA_CFLAGS} -qinclude=\$PWD/include/zos-v2r5-symbolfixes.h"
+    export ZOPEN_EXTRA_CXXFLAGS="\${ZOPEN_EXTRA_CXXFLAGS} -qinclude=\$PWD/include/zos-v2r5-symbolfixes.h"
+  else
+    export ZOPEN_EXTRA_CFLAGS="\${ZOPEN_EXTRA_CFLAGS} -include \$PWD/include/zos-v2r5-symbolfixes.h"
+    export ZOPEN_EXTRA_CXXFLAGS="\${ZOPEN_EXTRA_CXXFLAGS} -include \$PWD/include/zos-v2r5-symbolfixes.h"
+  fi
 fi
 ZZ
 }
