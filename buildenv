@@ -89,3 +89,24 @@ zopen_post_install()
   rm side_deck_magic.x
   )
 }
+
+zopen_get_version()
+{
+set -e
+TMP_EXE=$TMPDIR/zoslibver$$
+TMP_CPP=$TMPDIR/zoslibver$$.cc
+
+echo '
+#include <zos.h>
+#include <stdio.h>
+
+__init_zoslib mylib;
+
+int main(int argc, char** argv) {
+  printf("%s\n", __zoslib_version);
+}
+' >$TMP_CPP
+
+(export ZOPEN_OLD_PATH=$PATH; PATH="$ZOPEN_OLD_PATH" xlclang++ -qascii -I ./include -L ../build/lib -lzoslib -o$TMP_EXE $TMP_CPP)
+$TMP_EXE && rm $TMP_CPP && rm $TMP_EXE
+}
