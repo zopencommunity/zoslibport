@@ -92,20 +92,24 @@ zopen_post_install()
 
 zopen_get_version()
 {
-set -e
-TMP_EXE=$TMPDIR/zoslibver$$
-TMP_CPP=$TMPDIR/zoslibver$$.cc
+  set -e
+  if [ ! -d "$TMPDIR" ]; then
+    TMPDIR=/tmp
+  fi
+  TMP_EXE=$TMPDIR/zoslibver$$
+  TMP_CPP=$TMPDIR/zoslibver$$.cc
 
-echo '
-#include <zos.h>
-#include <stdio.h>
+  echo '
+    #include <zos.h>
+    #include <stdio.h>
 
-__init_zoslib mylib;
-int main(int argc, char** argv) {
-  printf("%s\n", __zoslib_version);
-}
-' >$TMP_CPP
+    __init_zoslib mylib;
 
-(export ZOPEN_OLD_PATH=$PATH; PATH="$ZOPEN_OLD_PATH" xlclang++ -qascii -I ./include -L ../build/lib -o$TMP_EXE $TMP_CPP -lzoslib)
-$TMP_EXE | tr -d 'v' && rm $TMP_CPP && rm $TMP_EXE
+    int main(int argc, char** argv) {
+      printf("%s\n", __zoslib_version);
+    }
+  ' >$TMP_CPP
+
+  (export ZOPEN_OLD_PATH=$PATH; PATH="$ZOPEN_OLD_PATH" xlclang++ -qascii -I ./include -L ../build/lib -o$TMP_EXE $TMP_CPP -lzoslib)
+  $TMP_EXE | tr -d 'v' && rm $TMP_CPP && rm $TMP_EXE
 }
