@@ -101,7 +101,6 @@ echo '
 #include <stdio.h>
 
 __init_zoslib mylib;
-
 int main(int argc, char** argv) {
   printf("%s\n", __zoslib_version);
 }
