@@ -107,6 +107,6 @@ int main(int argc, char** argv) {
 }
 ' >$TMP_CPP
 
-(export ZOPEN_OLD_PATH=$PATH; PATH="$ZOPEN_OLD_PATH" xlclang++ -qascii -I ./include -L ../build/lib -lzoslib -o$TMP_EXE $TMP_CPP)
-$TMP_EXE && rm $TMP_CPP && rm $TMP_EXE
+(export ZOPEN_OLD_PATH=$PATH; PATH="$ZOPEN_OLD_PATH" xlclang++ -qascii -I ./include -L ../build/lib -o$TMP_EXE $TMP_CPP -lzoslib)
+$TMP_EXE | tr -d 'v' && rm $TMP_CPP && rm $TMP_EXE
 }
