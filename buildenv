@@ -2,6 +2,7 @@ export ZOPEN_GIT_URL="https://github.com/ibmruntimes/zoslib.git"
 export ZOPEN_GIT_DEPS="make cmake git"
 export ZOPEN_GIT_BRANCH="zopen"
 export ZOPEN_TYPE="GIT"
+export ZOPEN_DONT_ADD_ZOSLIB_DEP=1 # zoslib cannot currently build with itself
 
 export ZOPEN_CONFIGURE="cmake"
 export ZOPEN_CONFIGURE_OPTS="-B ../build  --install-prefix \$ZOPEN_INSTALL_DIR/ -DBUILD_TESTING=ON -DENABLE_STATIC_INIT=ON -DZOSLIB_GENERIC=ON -DCMAKE_INSTALL_PREFIX=\$ZOPEN_INSTALL_DIR/ -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON ."
