@@ -107,7 +107,7 @@ zopen_get_version()
     __init_zoslib mylib;
 
     int main(int argc, char** argv) {
-      printf("%s\n", __zoslib_version);
+      printf("%s\\n", __zoslib_version);
     }
   ' >$TMP_CPP
 
