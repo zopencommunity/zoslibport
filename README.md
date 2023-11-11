@@ -1,3 +1,5 @@
+[![Automatic version updates](https://github.com/ZOSOpenTools/zoslibport/actions/workflows/bump.yml/badge.svg)](https://github.com/ZOSOpenTools/zoslibport/actions/workflows/bump.yml)
+
 ## ZOSLIB
 
 ZOSLIB is a z/OS C/C++ library, available in https://github.com/ibmruntimes/zoslib. It is an extended implementation of the z/OS LE C Runtime Library.
