@@ -1,0 +1,24 @@
+diff --git a/include/sys/mman.h b/include/sys/mman.h
+new file mode 100644
+index 0000000..17e00d0
+--- /dev/null
++++ b/include/sys/mman.h
+@@ -0,0 +1,18 @@
++///////////////////////////////////////////////////////////////////////////////
++// Licensed Materials - Property of IBM
++// ZOSLIB
++// (C) Copyright IBM Corp. 2020. All Rights Reserved.
++// US Government Users Restricted Rights - Use, duplication
++// or disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
++///////////////////////////////////////////////////////////////////////////////
++
++#include_next <sys/time.h>
++
++#ifndef MAP_ANONYMOUS
++  #define MAP_ANONYMOUS (16)
++#endif
++
++
++#ifndef MAP_ANON
++  #define MAP_ANON (MAP_ANONYMOUS)
++#endif

@@ -1,4 +1,5 @@
 install/
 log/
+log.DEV/
 zoslib/
 build/

@@ -1,0 +1,76 @@
+diff --git a/src/zos.cc b/src/zos.cc
+index 00ff7b0..0df467f 100644
+--- a/src/zos.cc
++++ b/src/zos.cc
+@@ -1479,11 +1479,6 @@ extern "C" void *__zalloc(size_t len, size_t alignment) {
+   }
+ }
+ 
+-void *anon_mmap(void *_, size_t len) {
+-  void *p = __zalloc(len, PAGE_SIZE);
+-  return (p == nullptr) ? MAP_FAILED : p;
+-}
+-
+ extern "C" int __zfree(void *addr, int len) {
+   if (__get_galloc_info()->is_rmode64(addr)) {
+     return __get_galloc_info()->free_seg(addr, len);
+@@ -1499,6 +1494,59 @@ int anon_munmap(void *addr, size_t len) {
+   return __zfree(addr, len);
+ }
+ 
++void* anon_mmap(void *addr, size_t len) {
++  #if 0
++    fprintf(stdout, "mmap anonymous to %p of len %zu with prot 0x%x and flags 0x%x filedes:%d, offset:%zu\n", addr, len, prot, flags, fildes, off);
++  #endif
++  int* ptr = calloc(len+4, 1);
++  ptr[0] = 0xDEADBEEF;
++  return &ptr[1];
++}
++
++int anon_munmap(void *addr, size_t len) {
++  int* ptr = addr;
++  if (ptr[-1] == 0xDEADBEEF) {
++  #if 0
++    fprintf(stdout, "munmap anonymous of %p and %zu\n", addr, len);
++  #endif
++    /* do not free storage - it could be unmapping just 'part' of the mapped storage - memory leak... */
++    /* free(&ptr[-1]); */
++    return 0;
++  } else {
++    errno = EINVAL;
++    return -1;
++  }
++}
++
++// overriding LE's mmap and munmap when linked statically
++extern "C" void *__MMAP_(void* addr, size_t length, int prot, int flags, int fd, off_t offset);
++extern "C" void *mmap(void* addr, size_t length, int prot, int flags, int fd, off_t offset) {
++  // Validate flags are acceptable
++  if (flags & MAP_ANONYMOUS) {
++    // anonymous - need to ignore the fd and offset fields
++    // currently only support PROT_READ | PROT_WRITE | MAP_PRIVATE for anonymous
++    if (flags & (MAP_ANONYMOUS | PROT_READ | PROT_WRITE | MAP_PRIVATE )) != (MAP_ANONYMOUS | PROT_READ | PROT_WRITE | MAP_PRIVATE )) [
++      errno = EINVAL;
++      return NULL;
++    }
++    return anon_mmap(addr, length);
++  } else {
++    return __MMAP_(addr, length, prot, flags, fd, offset);
++  }
++}
++
++// overriding LE's mmap and munmap when linked statically
++extern "C"int __MUNMAP_(void *addr, size_t len);
++extern "C" int munmap(void *addr, size_t len) {
++  // Check if this is an anonymous mmap
++  int* ptr = addr;
++  if (ptr[-1] == 0xDEADBEEF) {
++    return anon_munmap(addr, len);
++  } else {
++    return __MUNMAP_(addr, len);
++  }
++}
++
+ extern "C" int execvpe(const char *name, char *const argv[],
+                        char *const envp[]) {
+   // Absolute or Relative Path Name
