@@ -1,5 +1,5 @@
 diff --git a/src/zos.cc b/src/zos.cc
-index 00ff7b0..fc4660d 100644
+index 00ff7b0..8969970 100644
 --- a/src/zos.cc
 +++ b/src/zos.cc
 @@ -1479,11 +1479,6 @@ extern "C" void *__zalloc(size_t len, size_t alignment) {
@@ -42,7 +42,7 @@ index 00ff7b0..fc4660d 100644
 +extern "C" int anon_munmap(void *addr, size_t len) {
 +  int* ptr = (int*) addr;
 +  if (dbgmmap > 0) {
-+    fprintf(stderr, "ZOSLIB DEBUG: anonymous munmap to %p of len %zu ptr[-1]:%0x%x\n", addr, len, ptr[-1]);
++    fprintf(stderr, "ZOSLIB DEBUG: anonymous munmap to %p of len %zu ptr[-1]: %x\n", addr, len, ptr[-1]);
 +  }
 +  if (ptr[-1] == 0xDEADBEEF) {
 +    /* do not free storage - it could be unmapping just 'part' of the mapped storage - memory leak... */
