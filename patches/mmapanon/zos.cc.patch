@@ -1,5 +1,5 @@
 diff --git a/src/zos.cc b/src/zos.cc
-index 00ff7b0..4f81514 100644
+index 00ff7b0..7c759af 100644
 --- a/src/zos.cc
 +++ b/src/zos.cc
 @@ -1479,11 +1479,6 @@ extern "C" void *__zalloc(size_t len, size_t alignment) {
@@ -14,7 +14,7 @@ index 00ff7b0..4f81514 100644
  extern "C" int __zfree(void *addr, int len) {
    if (__get_galloc_info()->is_rmode64(addr)) {
      return __get_galloc_info()->free_seg(addr, len);
-@@ -1495,8 +1490,92 @@ extern "C" int __zfree(void *addr, int len) {
+@@ -1495,8 +1490,96 @@ extern "C" int __zfree(void *addr, int len) {
    return 0;
  }
  
@@ -39,6 +39,10 @@ index 00ff7b0..4f81514 100644
 +    ptr[3] = 0xDEADBEEF;
 +    return (void*) &ptr[4];
 +  } else {
++    if (dbgmmap > 0) {
++      fprintf(stderr, "ZOSLIB DEBUG: Issuing stack trace\n");
++      ctrace(""); // print out stack trace
++    }
 +    return MAP_FAILED;
 +  }
 +}
