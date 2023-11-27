@@ -1,5 +1,5 @@
 diff --git a/src/zos.cc b/src/zos.cc
-index 00ff7b0..0925051 100644
+index 00ff7b0..ee43609 100644
 --- a/src/zos.cc
 +++ b/src/zos.cc
 @@ -1479,11 +1479,6 @@ extern "C" void *__zalloc(size_t len, size_t alignment) {
@@ -14,7 +14,7 @@ index 00ff7b0..0925051 100644
  extern "C" int __zfree(void *addr, int len) {
    if (__get_galloc_info()->is_rmode64(addr)) {
      return __get_galloc_info()->free_seg(addr, len);
-@@ -1495,8 +1490,95 @@ extern "C" int __zfree(void *addr, int len) {
+@@ -1495,8 +1490,105 @@ extern "C" int __zfree(void *addr, int len) {
    return 0;
  }
  
@@ -30,38 +30,15 @@ index 00ff7b0..0925051 100644
 +  }
 +}
 +
-+extern "C" void* anon_mmap(void *addr, size_t len) {
-+  int* ptr = (int*) calloc(len+32, 1); /* keep storage aligned at double-word boundary */
-+  if (dbgmmap > 0) {
-+    fprintf(stderr, "ZOSLIB DEBUG: anonymous mmap of ptr: %p len %zu gives: %p\n", addr, len, ptr);
-+  }
-+  if (ptr) {
-+    ptr[3] = 0xDEADBEEF;
-+    return (void*) &ptr[4];
-+  } else {
-+    if (dbgmmap > 0) {
-+      fprintf(stderr, "ZOSLIB DEBUG: Issuing stack trace\n");
-+      ctrace(""); // print out stack trace
-+    }
-+    return MAP_FAILED;
-+  }
-+}
++struct mmap_hdr {
++  void* stg;
++  struct free_chunk* chunk_head;
++  uint64_t stg_len;
++  uint64_t eye_catcher;
++};
 +
-+extern "C" int anon_munmap(void *addr, size_t len) {
-+  int* ptr = (int*) addr;
-+  if (dbgmmap > 0) {
-+    fprintf(stderr, "ZOSLIB DEBUG: anonymous munmap to %p of len %zu ptr[-1]: %x\n", addr, len, ptr[-1]);
-+  }
-+  if (ptr[-1] == 0xDEADBEEF) {
-+    /* do not free storage - it could be unmapping just 'part' of the mapped storage - memory leak... */
-+    /* free(&ptr[-4]); */
-+    return 0;
-+  } else {
-+    /* this might be a pair from anon_mmap for RO storage */
-+    /* for now, still can't free storage because it could be in the middle of mmap'ed storage - for now do not free */
-+    return 0;
-+  }
-+}
++// MMAPUMAP in EBCDIC
++#define MMAPUMAP (0xD4D4C1D7E4D4C1D7ULL)
 +
 +// extending the z/OS mmap when linked statically
 +extern "C" void *zoslib_mmap(void* addr, size_t length, int prot, int flags, int fd, off_t offset) {
@@ -72,24 +49,49 @@ index 00ff7b0..0925051 100644
 +  if (dbgmmap > 0) {
 +    fprintf(stderr, "ZOSLIB DEBUG: mmap to %p of len %zu with prot 0x%x and flags 0x%x filedes:%d, offset:%zu\n", addr, length, prot, flags, fd, offset);
 +  }
-+  if (flags & MAP_ANONYMOUS) {
-+    // anonymous - need to ignore the fd and offset fields
-+    // currently only support prot of PROT_READ | PROT_WRITE and flags of MAP_PRIVATE | MAP_ANONYMOUS when anonymous requested
-+    if (
-+        ((prot & (PROT_READ | PROT_WRITE )) != (PROT_READ | PROT_WRITE )) || 
-+        ((flags & (MAP_ANONYMOUS | MAP_PRIVATE )) != (MAP_ANONYMOUS | MAP_PRIVATE ))
-+       ) {
-+      if (dbgmmap > 0) {
-+        fprintf(stderr, "ZOSLIB DEBUG: anonymous mmap only supports prot of 0x%x and flags of 0x%x but 0x%x and 0x%x given\n", 
-+          PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, prot, flags);
-+      }
-+      errno = EINVAL;
-+      return MAP_FAILED;
-+    }
-+    return anon_mmap(addr, length);
-+  } else {
++
++  // Allocate header for both anonymous and non-anonymous mmap requests
++
++  if (flags & MAP_ANONYMOUS == 0) {
++    // NOT anonymous - just return call to mmap
 +    return zos_mmap(addr, length, prot, flags, fd, offset);
 +  }
++
++
++  // anonymous - need to ignore the fd and offset fields
++  // currently only support prot of PROT_READ | PROT_WRITE and flags of MAP_PRIVATE | MAP_ANONYMOUS when anonymous requested
++  if (
++      ((prot & (PROT_READ | PROT_WRITE )) != (PROT_READ | PROT_WRITE )) || 
++      ((flags & (MAP_ANONYMOUS | MAP_PRIVATE )) != (MAP_ANONYMOUS | MAP_PRIVATE ))
++     ) {
++    if (dbgmmap > 0) {
++      fprintf(stderr, "ZOSLIB DEBUG: anonymous mmap only supports prot of 0x%x and flags of 0x%x but 0x%x and 0x%x given\n", 
++        PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, prot, flags);
++    }
++    errno = EINVAL;
++    return MAP_FAILED;
++  }
++
++  // This is a supported anonymous mmap request
++
++  struct mmap_hdr* hdr = (struct mmap_hdr*) calloc(length + sizeof(struct mmap_hdr), 1);
++  if (!hdr) {
++    if (dbgmmap > 0) {
++      fprintf(stderr, "ZOSLIB DEBUG: mmap allocation failure. Issuing stack trace\n");
++      ctrace(""); // print out stack trace
++    }
++    return MAP_FAILED;
++  }
++  void* ptr = (void*) (hdr+1);
++  hdr->stg = ptr;
++  hdr->chunk_head = NULL;
++  hdr->stg_len = length;
++  hdr->eye_catcher = MMAPUMAP;
++
++  if (dbgmmap > 0) {
++    fprintf(stderr, "ZOSLIB DEBUG: anonymous mmap. hdr: %p. returned ptr: %p user len %zu\n", hdr, ptr, length);
++  }
++  return ptr;
 +}
 +
 +// extending the z/OS munmap when linked statically
@@ -101,14 +103,22 @@ index 00ff7b0..0925051 100644
 +    fprintf(stderr, "ZOSLIB DEBUG: munmap to %p of len %zu\n", addr, len);
 +  }
 +
-+  // Check if this is an anonymous mmap
-+  int* ptr = (int*) addr;
-+  if (ptr[-1] == 0xDEADBEEF) {
-+    return anon_munmap(addr, len);
-+  } else {
-+    /* not smart enough to recognize munmap 'inside' storage area return zos_munmap(addr, len); */
++  struct mmap_hdr* hdr = (struct mmap_hdr*) addr;
++  --hdr;
++
++  if (dbgmmap > 0) {
++    fprintf(stderr, "ZOSLIB DEBUG: anonymous munmap to %p of len %zu hdr: %p [%lx]\n", addr, len, hdr, hdr->eye_catcher);
++  }
++  if ((addr != NULL) && (hdr->eye_catcher == MMAPUMAP) && (hdr->stg_len == len)) {
++    // This is safe to free - full unmap of map'ed storage
++    free(hdr);
 +    return 0;
 +  }
++  // do not free storage - it could be unmapping just 'part' of the mapped storage - memory leak..
++  if (dbgmmap > 0) {
++    fprintf(stderr, "ZOSLIB DEBUG: anonymous munmap - unable to safely free storage for %p len %zu\n", addr, len);
++  }
++  return 0;
  }
  
  extern "C" int execvpe(const char *name, char *const argv[],
