@@ -1,5 +1,5 @@
 diff --git a/src/zos.cc b/src/zos.cc
-index 00ff7b0..3024f9c 100644
+index 00ff7b0..8fb0dbf 100644
 --- a/src/zos.cc
 +++ b/src/zos.cc
 @@ -1479,11 +1479,6 @@ extern "C" void *__zalloc(size_t len, size_t alignment) {
@@ -14,7 +14,7 @@ index 00ff7b0..3024f9c 100644
  extern "C" int __zfree(void *addr, int len) {
    if (__get_galloc_info()->is_rmode64(addr)) {
      return __get_galloc_info()->free_seg(addr, len);
-@@ -1495,8 +1490,78 @@ extern "C" int __zfree(void *addr, int len) {
+@@ -1495,8 +1490,85 @@ extern "C" int __zfree(void *addr, int len) {
    return 0;
  }
  
@@ -65,8 +65,15 @@ index 00ff7b0..3024f9c 100644
 +  }
 +  if (flags & MAP_ANONYMOUS) {
 +    // anonymous - need to ignore the fd and offset fields
-+    // currently only support PROT_READ | PROT_WRITE | MAP_PRIVATE for anonymous
-+    if ((flags & (MAP_ANONYMOUS | PROT_READ | PROT_WRITE | MAP_PRIVATE )) != (MAP_ANONYMOUS | PROT_READ | PROT_WRITE | MAP_PRIVATE )) {
++    // currently only support prot of PROT_READ | PROT_WRITE and flags of MAP_PRIVATE | MAP_ANONYMOUS when anonymous requested
++    if (
++        ((prot & (PROT_READ | PROT_WRITE )) != (PROT_READ | PROT_WRITE )) || 
++        ((flags & (MAP_ANONYMOUS | MAP_PRIVATE )) != (MAP_ANONYMOUS | MAP_PRIVATE ))
++       ) {
++      if (dbgmmap > 0) {
++        fprintf(stderr, "ZOSLIB DEBUG: anonymous mmap only supports prot of 0x%x and flags of 0x%x but 0x%x and 0x%x given\n", 
++          PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, prot, flags);
++      }
 +      errno = EINVAL;
 +      return NULL;
 +    }
