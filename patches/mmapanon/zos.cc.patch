@@ -1,5 +1,5 @@
 diff --git a/src/zos.cc b/src/zos.cc
-index 00ff7b0..8fb0dbf 100644
+index 00ff7b0..c74b83b 100644
 --- a/src/zos.cc
 +++ b/src/zos.cc
 @@ -1479,11 +1479,6 @@ extern "C" void *__zalloc(size_t len, size_t alignment) {
@@ -89,7 +89,7 @@ index 00ff7b0..8fb0dbf 100644
 +    dbgmmap = dbgmmaprequested();
 +  }
 +  if (dbgmmap > 0) {
-+    fprintf(stderr, "ZOSLIB DEBUG: munmap to %p of len %zu", addr, len);
++    fprintf(stderr, "ZOSLIB DEBUG: munmap to %p of len %zu\n", addr, len);
 +  }
 +
 +  // Check if this is an anonymous mmap
