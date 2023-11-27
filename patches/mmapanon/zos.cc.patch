@@ -1,5 +1,5 @@
 diff --git a/src/zos.cc b/src/zos.cc
-index 00ff7b0..1618b80 100644
+index 00ff7b0..9f69f6e 100644
 --- a/src/zos.cc
 +++ b/src/zos.cc
 @@ -1479,11 +1479,6 @@ extern "C" void *__zalloc(size_t len, size_t alignment) {
@@ -31,13 +31,13 @@ index 00ff7b0..1618b80 100644
 +}
 +
 +extern "C" void* anon_mmap(void *addr, size_t len) {
-+  int* ptr = (int*) calloc(len+4, 1);
++  int* ptr = (int*) calloc(len+16, 1); /* keep storage aligned at double-word boundary */
 +  if (dbgmmap > 0) {
 +    fprintf(stderr, "ZOSLIB DEBUG: anonymous mmap of ptr: %p len %zu gives: %p\n", addr, len, ptr);
 +  }
 +  if (ptr) {
-+    ptr[0] = 0xDEADBEEF;
-+    return (void*) &ptr[1];
++    ptr[3] = 0xDEADBEEF;
++    return (void*) &ptr[4];
 +  } else {
 +    return NULL;
 +  }
