@@ -1,5 +1,5 @@
 diff --git a/src/zos.cc b/src/zos.cc
-index 00ff7b0..7c759af 100644
+index 00ff7b0..0925051 100644
 --- a/src/zos.cc
 +++ b/src/zos.cc
 @@ -1479,11 +1479,6 @@ extern "C" void *__zalloc(size_t len, size_t alignment) {
@@ -14,7 +14,7 @@ index 00ff7b0..7c759af 100644
  extern "C" int __zfree(void *addr, int len) {
    if (__get_galloc_info()->is_rmode64(addr)) {
      return __get_galloc_info()->free_seg(addr, len);
-@@ -1495,8 +1490,96 @@ extern "C" int __zfree(void *addr, int len) {
+@@ -1495,8 +1490,95 @@ extern "C" int __zfree(void *addr, int len) {
    return 0;
  }
  
@@ -31,7 +31,7 @@ index 00ff7b0..7c759af 100644
 +}
 +
 +extern "C" void* anon_mmap(void *addr, size_t len) {
-+  int* ptr = (int*) calloc(len+16, 1); /* keep storage aligned at double-word boundary */
++  int* ptr = (int*) calloc(len+32, 1); /* keep storage aligned at double-word boundary */
 +  if (dbgmmap > 0) {
 +    fprintf(stderr, "ZOSLIB DEBUG: anonymous mmap of ptr: %p len %zu gives: %p\n", addr, len, ptr);
 +  }
@@ -54,12 +54,11 @@ index 00ff7b0..7c759af 100644
 +  }
 +  if (ptr[-1] == 0xDEADBEEF) {
 +    /* do not free storage - it could be unmapping just 'part' of the mapped storage - memory leak... */
-+    /* free(&ptr[-1]); */
++    /* free(&ptr[-4]); */
 +    return 0;
 +  } else {
 +    /* this might be a pair from anon_mmap for RO storage */
 +    /* for now, still can't free storage because it could be in the middle of mmap'ed storage - for now do not free */
-+    /* return __zfree(addr, len); */
 +    return 0;
 +  }
 +}
