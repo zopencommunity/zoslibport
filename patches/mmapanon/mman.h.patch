@@ -1,9 +1,9 @@
 diff --git a/include/sys/mman.h b/include/sys/mman.h
 new file mode 100644
-index 0000000..8da5abd
+index 0000000..f4a6459
 --- /dev/null
 +++ b/include/sys/mman.h
-@@ -0,0 +1,37 @@
+@@ -0,0 +1,35 @@
 +///////////////////////////////////////////////////////////////////////////////
 +// Licensed Materials - Property of IBM
 +// ZOSLIB
@@ -18,12 +18,12 @@ index 0000000..8da5abd
 +#endif
 +
 +void *zoslib_mmap(void* addr, size_t length, int prot, int flags, int fd, off_t offset);
-+int zoslib_unmap(void *addr, size_t len);
++int zoslib_munmap(void *addr, size_t len);
 +
 +#pragma map(zos_mmap, "mmap")
-+#pragma map(zos_unmap, "munmap")
++#pragma map(zos_munmap, "munmap")
 +void *zos_mmap(void* addr, size_t length, int prot, int flags, int fd, off_t offset);
-+int zos_unmap(void *addr, size_t len);
++int zos_munmap(void *addr, size_t len);
 +
 +#ifdef __cplusplus
 +  }
@@ -31,8 +31,6 @@ index 0000000..8da5abd
 +
 +#define mmap (zoslib_mmap)
 +#define munmap (zoslib_munmap)
-+#define zos_mmap (mmap)
-+#define zos_munmap (munmap)
 +
 +#ifndef MAP_ANONYMOUS
 +  #define MAP_ANONYMOUS (16)

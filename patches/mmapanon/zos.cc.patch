@@ -1,5 +1,5 @@
 diff --git a/src/zos.cc b/src/zos.cc
-index 00ff7b0..90db3bc 100644
+index 00ff7b0..3024f9c 100644
 --- a/src/zos.cc
 +++ b/src/zos.cc
 @@ -1479,11 +1479,6 @@ extern "C" void *__zalloc(size_t len, size_t alignment) {
@@ -14,27 +14,37 @@ index 00ff7b0..90db3bc 100644
  extern "C" int __zfree(void *addr, int len) {
    if (__get_galloc_info()->is_rmode64(addr)) {
      return __get_galloc_info()->free_seg(addr, len);
-@@ -1495,8 +1490,55 @@ extern "C" int __zfree(void *addr, int len) {
+@@ -1495,8 +1490,78 @@ extern "C" int __zfree(void *addr, int len) {
    return 0;
  }
  
 -int anon_munmap(void *addr, size_t len) {
 -  return __zfree(addr, len);
++static int dbgmmap = -1;
++static int dbgmmaprequested() {
++  char* dbgset = getenv("ZOSLIB_DEBUG_MMAP");
++  if (!strcmp(dbgset, "1") || !strcmp(dbgset, "Y") || !strcmp(dbgset, "y")) {
++    return 1;
++  } else {
++    return 0;
++  }
++}
++
 +extern "C" void* anon_mmap(void *addr, size_t len) {
-+  #if 0
-+    fprintf(stdout, "mmap anonymous to %p of len %zu with prot 0x%x and flags 0x%x filedes:%d, offset:%zu\n", addr, len, prot, flags, fildes, off);
-+  #endif
 +  int* ptr = (int*) calloc(len+4, 1);
++  if (dbgmmap > 0) {
++    fprintf(stderr, "ZOSLIB DEBUG: anonymous mmap of ptr: %p len %zu gives: %p\n", addr, len, ptr);
++  }
 +  ptr[0] = 0xDEADBEEF;
 +  return (void*) &ptr[1];
 +}
 +
 +extern "C" int anon_munmap(void *addr, size_t len) {
 +  int* ptr = (int*) addr;
++  if (dbgmmap > 0) {
++    fprintf(stderr, "ZOSLIB DEBUG: anonymous munmap to %p of len %zu ptr[-1]:%u\n", addr, len, ptr[-1]);
++  }
 +  if (ptr[-1] == 0xDEADBEEF) {
-+  #if 0
-+    fprintf(stdout, "munmap anonymous of %p and %zu\n", addr, len);
-+  #endif
 +    /* do not free storage - it could be unmapping just 'part' of the mapped storage - memory leak... */
 +    /* free(&ptr[-1]); */
 +    return 0;
@@ -47,6 +57,12 @@ index 00ff7b0..90db3bc 100644
 +// extending the z/OS mmap when linked statically
 +extern "C" void *zoslib_mmap(void* addr, size_t length, int prot, int flags, int fd, off_t offset) {
 +  // Validate flags are acceptable
++  if (dbgmmap < 0) {
++    dbgmmap = dbgmmaprequested();
++  }
++  if (dbgmmap > 0) {
++    fprintf(stderr, "ZOSLIB DEBUG: mmap to %p of len %zu with prot 0x%x and flags 0x%x filedes:%d, offset:%zu\n", addr, length, prot, flags, fd, offset);
++  }
 +  if (flags & MAP_ANONYMOUS) {
 +    // anonymous - need to ignore the fd and offset fields
 +    // currently only support PROT_READ | PROT_WRITE | MAP_PRIVATE for anonymous
@@ -61,13 +77,20 @@ index 00ff7b0..90db3bc 100644
 +}
 +
 +// extending the z/OS munmap when linked statically
-+extern "C" int zoslib_unmap(void *addr, size_t len) {
++extern "C" int zoslib_munmap(void *addr, size_t len) {
++  if (dbgmmap < 0) {
++    dbgmmap = dbgmmaprequested();
++  }
++  if (dbgmmap > 0) {
++    fprintf(stderr, "ZOSLIB DEBUG: munmap to %p of len %zu", addr, len);
++  }
++
 +  // Check if this is an anonymous mmap
 +  int* ptr = (int*) addr;
 +  if (ptr[-1] == 0xDEADBEEF) {
 +    return anon_munmap(addr, len);
 +  } else {
-+    return zos_unmap(addr, len);
++    return zos_munmap(addr, len);
 +  }
  }
  
