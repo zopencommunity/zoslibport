@@ -1,5 +1,5 @@
 diff --git a/src/zos.cc b/src/zos.cc
-index 00ff7b0..9944356 100644
+index 00ff7b0..b93b942 100644
 --- a/src/zos.cc
 +++ b/src/zos.cc
 @@ -1479,11 +1479,6 @@ extern "C" void *__zalloc(size_t len, size_t alignment) {
@@ -39,9 +39,6 @@ index 00ff7b0..9944356 100644
 +
 +// MMAPUMAP in EBCDIC
 +#define MMAPUMAP (0xD4D4C1D7E4D4C1D7ULL)
-+
-+// Small page in z/OS
-+#define PAGE_SIZE (4096)
 +
 +// extending the z/OS mmap when linked statically
 +extern "C" void *zoslib_mmap(void* addr, size_t length, int prot, int flags, int fd, off_t offset) {
@@ -85,8 +82,10 @@ index 00ff7b0..9944356 100644
 +    }
 +    return MAP_FAILED;
 +  }
-+  
-+  struct mmap_hdr* hdr = std::align(PAGE_SIZE, length, raw, length + PAGE_SIZE);
++ 
++  size_t size = (length + ((size_t) PAGE_SIZE));
++  void* align = raw;
++  struct mmap_hdr* hdr = (struct mmap_hdr*) std::align(PAGE_SIZE, length, align, size);
 +  if (!hdr) {
 +    if (dbgmmap > 0) {
 +      fprintf(stderr, "ZOSLIB DEBUG: Unexpected alignment failure on storage\n");
@@ -94,6 +93,7 @@ index 00ff7b0..9944356 100644
 +    }
 +    return MAP_FAILED;
 +  }
++  hdr--; // move the header point back - it will not be aligned but the pointer to the caller WILL be
 +  void* ptr = (void*) (hdr+1);
 +  hdr->stg = raw;
 +  hdr->chunk_head = NULL;
@@ -123,7 +123,7 @@ index 00ff7b0..9944356 100644
 +  }
 +  if ((addr != NULL) && (hdr->eye_catcher == MMAPUMAP) && (hdr->stg_len < len + PAGE_SIZE)) {
 +    // This is safe to free - full unmap of map'ed storage
-+    free(hdr);
++    free(hdr->stg);
 +    return 0;
 +  }
 +  // do not free storage - it could be unmapping just 'part' of the mapped storage - memory leak..
