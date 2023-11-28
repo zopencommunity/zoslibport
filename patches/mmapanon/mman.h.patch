@@ -1,6 +1,6 @@
 diff --git a/include/sys/mman.h b/include/sys/mman.h
 new file mode 100644
-index 0000000..f4a6459
+index 0000000..fc78533
 --- /dev/null
 +++ b/include/sys/mman.h
 @@ -0,0 +1,35 @@
@@ -22,7 +22,7 @@ index 0000000..f4a6459
 +
 +#pragma map(zos_mmap, "mmap")
 +#pragma map(zos_munmap, "munmap")
-+void *zos_mmap(void* addr, size_t length, int prot, int flags, int fd, off_t offset);
++void *zos_mmap(void* addr, size_t len, int prot, int flags, int fd, off_t offset);
 +int zos_munmap(void *addr, size_t len);
 +
 +#ifdef __cplusplus

@@ -1,5 +1,5 @@
 diff --git a/src/zos.cc b/src/zos.cc
-index 00ff7b0..1605d12 100644
+index 00ff7b0..f812548 100644
 --- a/src/zos.cc
 +++ b/src/zos.cc
 @@ -626,6 +626,9 @@ unsigned long __clock(void) {
@@ -43,7 +43,7 @@ index 00ff7b0..1605d12 100644
  extern "C" int __zfree(void *addr, int len) {
    if (__get_galloc_info()->is_rmode64(addr)) {
      return __get_galloc_info()->free_seg(addr, len);
-@@ -1495,8 +1490,112 @@ extern "C" int __zfree(void *addr, int len) {
+@@ -1495,8 +1490,121 @@ extern "C" int __zfree(void *addr, int len) {
    return 0;
  }
  
@@ -51,6 +51,9 @@ index 00ff7b0..1605d12 100644
 -  return __zfree(addr, len);
 +static int dbgmmaprequested() {
 +  char* dbgset = getenv("ZOSLIB_DEBUG_MMAP");
++  if (!dbgset) {
++    return 0;
++  }
 +  if (!strcmp(dbgset, "1") || !strcmp(dbgset, "Y") || !strcmp(dbgset, "y")) {
 +    __setdebug(1);
 +    return 1;
@@ -62,7 +65,7 @@ index 00ff7b0..1605d12 100644
 +
 +struct mmap_hdr {
 +  void* stg;
-+  struct free_chunk* chunk_head;
++  void* chunk_head; // TBD: Add support for unmapping chunks of the mapped storage
 +  uint64_t stg_len;
 +  uint64_t eye_catcher;
 +};
@@ -143,6 +146,12 @@ index 00ff7b0..1605d12 100644
 +  if (dbgmmap) {
 +    dprintf(2, "ZOSLIB DEBUG: anonymous munmap to %p of len %zu hdr: %p [%lx]\n", addr, len, hdr, hdr->eye_catcher);
 +  }
++
++  if ((addr != NULL) && (hdr->eye_catcher != MMAPUMAP)) {
++    // NOT anonymous because there is no eye_catcher before the storage
++    return zos_unmap(addr, len);
++  }
++
 +  if ((addr != NULL) && (hdr->eye_catcher == MMAPUMAP) && (hdr->stg_len < len + PAGE_SIZE)) {
 +    // This is safe to free - full unmap of map'ed storage pages
 +    free(hdr->stg);
