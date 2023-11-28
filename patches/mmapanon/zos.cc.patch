@@ -1,5 +1,5 @@
 diff --git a/src/zos.cc b/src/zos.cc
-index 00ff7b0..b93b942 100644
+index 00ff7b0..856f24d 100644
 --- a/src/zos.cc
 +++ b/src/zos.cc
 @@ -1479,11 +1479,6 @@ extern "C" void *__zalloc(size_t len, size_t alignment) {
@@ -84,7 +84,7 @@ index 00ff7b0..b93b942 100644
 +  }
 + 
 +  size_t size = (length + ((size_t) PAGE_SIZE));
-+  void* align = raw;
++  void* align = ( ((char*)raw) + sizeof(struct mmap_hdr) );
 +  struct mmap_hdr* hdr = (struct mmap_hdr*) std::align(PAGE_SIZE, length, align, size);
 +  if (!hdr) {
 +    if (dbgmmap > 0) {
