@@ -1,9 +1,9 @@
 diff --git a/test/test-mmap.cc b/test/test-mmap.cc
 new file mode 100644
-index 0000000..b0bcaf5
+index 0000000..7baac8f
 --- /dev/null
 +++ b/test/test-mmap.cc
-@@ -0,0 +1,24 @@
+@@ -0,0 +1,29 @@
 +#include "zos.h"
 +#include "gtest/gtest.h"
 +#include <libgen.h>
@@ -15,16 +15,21 @@ index 0000000..b0bcaf5
 +  //
 +  // Ensure I can map / unmap quite a few times without exhausting storage
 +  // (i.e. no memory leak) 
-+  char* memory;
++  void* memory;
++  char* cmem;
 +
 +  for (int i=0; i<100; ++i) {
 +    // allocate 1GB and then update a byte on the start and end, 
 +    // then delete and repeat
 +    memory = mmap(0, 1<<19, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
-+    EXPECT_STRNE(memory, NULL);
-+    memory[0] = memory[1<<19 -1] = 'X';
++    cmem = (char*) memory;
++    EXPECT_STRNE(cmem, NULL);
 +
-+    munmap(memory, 1<<19);
++    cmem[0] = cmem[1<<19 -1] = 'X';
++
++    munmap(cmem, 1<<19);
 +  }
++
++}
 +
 +} // namespace
