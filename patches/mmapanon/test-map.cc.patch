@@ -1,0 +1,86 @@
+diff --git a/test/test-mmap.cc b/test/test-mmap.cc
+new file mode 100644
+index 0000000..eb9a1c4
+--- /dev/null
++++ b/test/test-mmap.cc
+@@ -0,0 +1,80 @@
++#include "zos.h"
++#include "gtest/gtest.h"
++#include <libgen.h>
++#include <fcntl.h>
++#include <sys/mman.h>
++
++namespace {
++
++TEST(MMAPTest, AnonymousMMapAndMUNMapLeakDetection) {
++  //
++  // Ensure I can map / unmap quite a few times without exhausting storage
++  // (i.e. no memory leak) 
++  void* memory;
++  char* cmem;
++  const size_t len = 1<<30;
++  const int iters = 100;
++  int rc;
++
++  for (int i=0; i<iters; ++i) {
++    // allocate a large amount of storage and then update a byte on the start and end, 
++    // then delete and repeat such that if not freeing storage, would fail.
++    memory = mmap(0, len, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
++    EXPECT_NE(memory, MAP_FAILED);
++    cmem = (char*) memory;
++    EXPECT_STRNE(cmem, NULL);
++
++    cmem[0] = cmem[len - 1] = 'X';
++
++    // storage must be page (4K) aligned, so this should still free the full map'ed area
++    rc = munmap(cmem, len - 4095);
++    EXPECT_EQ(rc, 0);
++  }
++
++}
++
++#define CONTENTS "This is the contents of the file"
++#define CONTENTS_SIZE (sizeof(CONTENTS))
++
++TEST(MMAPTest, MMapCallThrough) {
++  //
++  // Ensure mmap and munmap to a file work ok by:
++  // - creating a temp file
++  // - setting up a memory map to the file
++  // - deleting the file
++  // - validating contents of the file
++
++  void* memory;
++  char* cmem;
++  int rc;
++
++  char filecontents[] = "This is the contents of the file";
++  char tmplate[] = "/tmp/XXXXXX";
++
++  int rwfd = mkstemp(tmplate);
++  EXPECT_NE(rwfd, -1);
++  ssize_t bytes = write(rwfd, filecontents, CONTENTS_SIZE);
++  EXPECT_EQ(bytes, CONTENTS_SIZE);
++  rc = close(rwfd);
++  EXPECT_EQ(rc, 0);
++
++  rwfd = open(tmplate, O_RDONLY);
++  EXPECT_NE(rwfd, -1);
++
++  memory = mmap(0, CONTENTS_SIZE, PROT_READ|PROT_WRITE, MAP_PRIVATE, rwfd, 0);
++  EXPECT_NE(memory, MAP_FAILED);
++
++  rc = close(rwfd);
++  EXPECT_EQ(rc, 0);
++
++  cmem = (char*) memory;
++  EXPECT_STREQ(cmem, filecontents);
++
++  cmem[0] = cmem[CONTENTS_SIZE - 1] = 'X';
++
++  // storage must be page (4K) aligned, so should be able to pass a length of 1
++  rc = munmap(cmem, 1);
++  EXPECT_EQ(rc, 0);
++
++}
++} // namespace

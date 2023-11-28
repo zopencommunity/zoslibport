@@ -1,5 +1,5 @@
 diff --git a/src/zos.cc b/src/zos.cc
-index 00ff7b0..d7d5203 100644
+index 00ff7b0..f0acdc0 100644
 --- a/src/zos.cc
 +++ b/src/zos.cc
 @@ -626,6 +626,9 @@ unsigned long __clock(void) {
@@ -79,7 +79,7 @@ index 00ff7b0..d7d5203 100644
 +    dprintf(2, "ZOSLIB DEBUG: mmap to %p of len %zu with prot 0x%x and flags 0x%x filedes:%d, offset:%zu\n", addr, length, prot, flags, fd, offset);
 +  }
 +
-+  if (flags & MAP_ANONYMOUS == 0) {
++  if ((flags & MAP_ANONYMOUS) == 0) {
 +    // NOT anonymous - just return call to mmap
 +    return zos_mmap(addr, length, prot, flags, fd, offset);
 +  }
