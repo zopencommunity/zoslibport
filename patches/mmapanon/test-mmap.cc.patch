@@ -1,9 +1,9 @@
 diff --git a/test/test-mmap.cc b/test/test-mmap.cc
 new file mode 100644
-index 0000000..7baac8f
+index 0000000..bbcc260
 --- /dev/null
 +++ b/test/test-mmap.cc
-@@ -0,0 +1,29 @@
+@@ -0,0 +1,33 @@
 +#include "zos.h"
 +#include "gtest/gtest.h"
 +#include <libgen.h>
@@ -17,17 +17,21 @@ index 0000000..7baac8f
 +  // (i.e. no memory leak) 
 +  void* memory;
 +  char* cmem;
++  const size_t len = 1<<30;
++  const int iters = 100;
 +
-+  for (int i=0; i<100; ++i) {
-+    // allocate 1GB and then update a byte on the start and end, 
-+    // then delete and repeat
-+    memory = mmap(0, 1<<19, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
++  for (int i=0; i<iters; ++i) {
++    // allocate a large amount of storage and then update a byte on the start and end, 
++    // then delete and repeat such that if not freeing storage, would fail.
++    memory = mmap(0, len, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
++    EXPECT_NE(memory, MAP_FAILED);
 +    cmem = (char*) memory;
 +    EXPECT_STRNE(cmem, NULL);
 +
-+    cmem[0] = cmem[1<<19 -1] = 'X';
++    cmem[0] = cmem[len - 1] = 'X';
 +
-+    munmap(cmem, 1<<19);
++    // storage must be page (4K) aligned, so this should still free the full map'ed area
++    munmap(cmem, len - 4095);
 +  }
 +
 +}
