@@ -1,0 +1,100 @@
+diff --git a/include/zos-base.h b/include/zos-base.h
+index 75d7826..59ab75e 100644
+--- a/include/zos-base.h
++++ b/include/zos-base.h
+@@ -297,18 +297,43 @@ __Z_EXPORT unsigned long __mach_absolute_time(void);
+ __Z_EXPORT void *__zalloc(size_t len, size_t alignment);
+ 
+ /**
+- * Allocate memory in 64-bit virtual storage when size is a megabyte multiple
+- * or above 2GB, or in 31-bit storage (with PAGE_SIZE bytes alignment)
+- * otherwise, and if none is available, attempt to allocate from 64-bit virtual
+- * storage.
+- * \param [in] _ ignored
+- * \param [in] len length in bytes of memory to allocate
++ * mmap - map files or devices into memory. 
++ * Extend the mmap function to also support MAP_ANONYMOUS in a restricted fashion.
++ * Calls that do not specify the MAP_ANONYMOUS flag will be passed directly to the
++ * standard z/OS LE mmap function. See the LE mmap function for details of the 
++ * mmap interface when MAP_ANONYMOUS is not specified.
++ *
++ * \param [in] addr address for mapping. For MAP_ANONYMOUS, this must be NULL.
++ * \param [in] length length in bytes of the mapping. For MAP_ANONYMOUS, the resultant
++ *             storage will be initialized to 0.
++ * \param [in] prot memory protection of the mapping. For MAP_ANONYMOUS, this must be
++ *             PROT_READ | PROT_WRITE. 
++ * \param [in] flags flags argument determines how mapping is performed. If MAP_ANONYMOUS
++ *             is specified, then MAP_PRIVATE must also be specified, along with no other
++ *             flags.
+  * \return pointer to the beginning of newly allocated memory, or MAP_FAILED if
+- *         unsuccessful
+- * \deprecated This function will be removed once mmap is fully functional
++ *         unsuccessful. The storage will be 4K page aligned. 
++ * \deprecated This function will be removed once mmap and munmap is fully functional
++ * (e.g. MAP_ANONYMOUS is supported)
++ */
++__Z_EXPORT void *zoslib_mmap(void* addr, size_t length, int prot, int flags, int fd, off_t offset);
++
++/**
++ * munmap - unmap files or devices in memory.
++ * Extend the munmap function to also support MAP_ANONYMOUS mapped storage in a restricted fashion.
++ * Calls that do not have an extension header will be passed directly to the
++ * standard z/OS LE munmap function. See the LE munmap function for details of the 
++ * mmap interface when MAP_ANONYMOUS is not specified.
++ * \param [in] addr start address of previously allocated memory
++ * \param [in] len length in bytes of area to unmap
++ * \return returns 0 if successful, -1 if unsuccessful
++ * \deprecated This function will be removed once mmap and munmap is fully functional
+  * (e.g. MAP_ANONYMOUS is supported)
++ *
++ * Note that unmapping a portion of previous mapped storage will not unmap the entire 
++ * mapped area. This is a current limitation in the implementation.
+  */
+-__Z_EXPORT void *anon_mmap(void *_, size_t len);
++__Z_EXPORT int zoslib_munmap(void *addr, size_t len);
+ 
+ /**
+  * Allocate memory (using __zalloc()) and read into it contents of given file
+@@ -321,25 +346,6 @@ __Z_EXPORT void *anon_mmap(void *_, size_t len);
+  */
+ __Z_EXPORT void *__zalloc_for_fd(size_t len, const char *filename, int fd,
+                                  off_t offset);
+-
+-/**
+- * Allocate memory (using __zalloc()) and read into it contents of given file
+- * at the given offset.
+- * \param [in] _ ignored
+- * \param [in] len length in bytes of memory map
+- * \param [in] prot protection bits
+- * \param [in] flags mmap flags
+- * \param [in] filename filename to read
+- * \param [in] fd file descriptor
+- * \param [in] offset offset in bytes into the file to read
+- * \return pointer to the beginning of newly allocated memory, or MAP_FAILED if
+- *         unsuccessful
+- * \deprecated This function will be removed once mmap is fully functional
+- * (e.g. MAP_ANONYMOUS is supported), in which case mapped memory would need to
+- * be converted to ASCII if the file contains EBCDIC.
+- */
+-__Z_EXPORT void *roanon_mmap(void *_, size_t len, int prot, int flags,
+-                  const char *filename, int fd, off_t offset);
+ /**
+  * Deallocate memory
+  * \param [in] addr start address of memory
+@@ -348,16 +354,6 @@ __Z_EXPORT void *roanon_mmap(void *_, size_t len, int prot, int flags,
+  */
+ __Z_EXPORT int __zfree(void *addr, int len);
+ 
+-/**
+- * Deallocate memory
+- * \param [in] addr start address of memory
+- * \param [in] len length in bytes
+- * \return returns 0 if successful, -1 if unsuccessful
+- * \deprecated This function will be removed once mmap is fully functional
+- * (e.g. MAP_ANONYMOUS is supported)
+- */
+-__Z_EXPORT int anon_munmap(void *addr, size_t len);
+-
+ /**
+  * Check if an LE function is present in the LE vector table
+  * \param [in] addr address to LE function

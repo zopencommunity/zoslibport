@@ -1,7 +1,36 @@
 diff --git a/src/zos.cc b/src/zos.cc
-index 00ff7b0..856f24d 100644
+index 00ff7b0..3b32785 100644
 --- a/src/zos.cc
 +++ b/src/zos.cc
+@@ -626,6 +626,9 @@ unsigned long __clock(void) {
+   return ((value / 512UL) * 125UL) - 2208988800000000000UL;
+ }
+ 
++extern "C" void __setdebug(int v) { __debug_mode = v; }
++extern "C" int __indebug(void) { return __debug_mode; }
++
+ static void *_timer(void *parm) {
+   timer_parm_t *tp = (timer_parm_t *)parm;
+   unsigned long t0 = __clock();
+@@ -634,7 +637,7 @@ static void *_timer(void *parm) {
+     sleep(tp->secs);
+     t1 = __clock();
+   }
+-  if (__debug_mode) {
++  if (__indebug()) {
+     dprintf(2, "Sent abort: __NODERUNTIMELIMIT was set to %d\n", tp->secs);
+     raise(SIGABRT);
+   }
+@@ -659,9 +662,6 @@ extern void __settimelimit(int secs) {
+   }
+   pthread_attr_destroy(&attr);
+ }
+-extern "C" void __setdebug(int v) { __debug_mode = v; }
+-extern "C" int __indebug(void) { return __debug_mode; }
+-
+ extern "C" void *__dlcb_next(void *last) {
+   if (last == 0) {
+     return ((char *****__ptr32 *)1208)[0][11][1][113][193];
 @@ -1479,11 +1479,6 @@ extern "C" void *__zalloc(size_t len, size_t alignment) {
    }
  }
@@ -14,21 +43,22 @@ index 00ff7b0..856f24d 100644
  extern "C" int __zfree(void *addr, int len) {
    if (__get_galloc_info()->is_rmode64(addr)) {
      return __get_galloc_info()->free_seg(addr, len);
-@@ -1495,8 +1490,117 @@ extern "C" int __zfree(void *addr, int len) {
+@@ -1495,8 +1490,112 @@ extern "C" int __zfree(void *addr, int len) {
    return 0;
  }
  
 -int anon_munmap(void *addr, size_t len) {
 -  return __zfree(addr, len);
-+static int dbgmmap = -1;
 +static int dbgmmaprequested() {
 +  char* dbgset = getenv("ZOSLIB_DEBUG_MMAP");
 +  if (!strcmp(dbgset, "1") || !strcmp(dbgset, "Y") || !strcmp(dbgset, "y")) {
++    __setdebug(1);
 +    return 1;
 +  } else {
 +    return 0;
 +  }
 +}
++static int dbgmmap = dbgmmaprequested();
 +
 +struct mmap_hdr {
 +  void* stg;
@@ -37,26 +67,19 @@ index 00ff7b0..856f24d 100644
 +  uint64_t eye_catcher;
 +};
 +
-+// MMAPUMAP in EBCDIC
++// MMAPUMAP is MMAPUNMAP in EBCDIC
 +#define MMAPUMAP (0xD4D4C1D7E4D4C1D7ULL)
 +
-+// extending the z/OS mmap when linked statically
 +extern "C" void *zoslib_mmap(void* addr, size_t length, int prot, int flags, int fd, off_t offset) {
 +  // Validate flags are acceptable
-+  if (dbgmmap < 0) {
-+    dbgmmap = dbgmmaprequested();
++  if (dbgmmap) {
++    dprintf(stderr, "ZOSLIB DEBUG: mmap to %p of len %zu with prot 0x%x and flags 0x%x filedes:%d, offset:%zu\n", addr, length, prot, flags, fd, offset);
 +  }
-+  if (dbgmmap > 0) {
-+    fprintf(stderr, "ZOSLIB DEBUG: mmap to %p of len %zu with prot 0x%x and flags 0x%x filedes:%d, offset:%zu\n", addr, length, prot, flags, fd, offset);
-+  }
-+
-+  // Allocate header for both anonymous and non-anonymous mmap requests
 +
 +  if (flags & MAP_ANONYMOUS == 0) {
 +    // NOT anonymous - just return call to mmap
 +    return zos_mmap(addr, length, prot, flags, fd, offset);
 +  }
-+
 +
 +  // anonymous - need to ignore the fd and offset fields
 +  // currently only support prot of PROT_READ | PROT_WRITE and flags of MAP_PRIVATE | MAP_ANONYMOUS when anonymous requested
@@ -64,8 +87,8 @@ index 00ff7b0..856f24d 100644
 +      ((prot & (PROT_READ | PROT_WRITE )) != (PROT_READ | PROT_WRITE )) || 
 +      ((flags & (MAP_ANONYMOUS | MAP_PRIVATE )) != (MAP_ANONYMOUS | MAP_PRIVATE ))
 +     ) {
-+    if (dbgmmap > 0) {
-+      fprintf(stderr, "ZOSLIB DEBUG: anonymous mmap only supports prot of 0x%x and flags of 0x%x but 0x%x and 0x%x given\n", 
++    if (dbgmmap) {
++      dprintf(stderr, "ZOSLIB DEBUG: anonymous mmap only supports prot of 0x%x and flags of 0x%x but 0x%x and 0x%x given\n", 
 +        PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, prot, flags);
 +    }
 +    errno = EINVAL;
@@ -76,9 +99,9 @@ index 00ff7b0..856f24d 100644
 +
 +  void* raw = calloc(length + sizeof(struct mmap_hdr) + PAGE_SIZE, 1);
 +  if (!raw) {
-+    if (dbgmmap > 0) {
-+      fprintf(stderr, "ZOSLIB DEBUG: mmap allocation failure. Issuing stack trace\n");
-+      ctrace(""); // print out stack trace
++    if (dbgmmap) {
++      dprintf(stderr, "ZOSLIB DEBUG: mmap allocation failure. Issuing stack trace\n");
++      ctrace(""); // print out stack trace to aid debug
 +    }
 +    return MAP_FAILED;
 +  }
@@ -87,48 +110,49 @@ index 00ff7b0..856f24d 100644
 +  void* align = ( ((char*)raw) + sizeof(struct mmap_hdr) );
 +  struct mmap_hdr* hdr = (struct mmap_hdr*) std::align(PAGE_SIZE, length, align, size);
 +  if (!hdr) {
-+    if (dbgmmap > 0) {
-+      fprintf(stderr, "ZOSLIB DEBUG: Unexpected alignment failure on storage\n");
++    if (dbgmmap) {
++      dprintf(stderr, "ZOSLIB DEBUG: Unexpected alignment failure on storage\n");
 +      ctrace(""); // print out stack trace
 +    }
 +    return MAP_FAILED;
 +  }
-+  hdr--; // move the header point back - it will not be aligned but the pointer to the caller WILL be
++
++  // move the header point back - it will not be aligned but the pointer to the caller WILL be
++  hdr--; 
 +  void* ptr = (void*) (hdr+1);
 +  hdr->stg = raw;
 +  hdr->chunk_head = NULL;
 +  hdr->stg_len = length;
 +  hdr->eye_catcher = MMAPUMAP;
 +
-+  if (dbgmmap > 0) {
-+    fprintf(stderr, "ZOSLIB DEBUG: anonymous mmap. raw: %p hdr: %p returned ptr: %p user len %zu\n", raw, hdr, ptr, length);
++  if (dbgmmap) {
++    dprintf(stderr, "ZOSLIB DEBUG: anonymous mmap. raw: %p hdr: %p returned ptr: %p user len %zu\n", raw, hdr, ptr, length);
 +  }
 +  return ptr;
 +}
 +
 +// extending the z/OS munmap when linked statically
 +extern "C" int zoslib_munmap(void *addr, size_t len) {
-+  if (dbgmmap < 0) {
-+    dbgmmap = dbgmmaprequested();
-+  }
-+  if (dbgmmap > 0) {
-+    fprintf(stderr, "ZOSLIB DEBUG: munmap to %p of len %zu\n", addr, len);
++  if (dbgmmap) {
++    dprintf(stderr, "ZOSLIB DEBUG: munmap to %p of len %zu\n", addr, len);
 +  }
 +
 +  struct mmap_hdr* hdr = (struct mmap_hdr*) addr;
 +  --hdr;
 +
-+  if (dbgmmap > 0) {
-+    fprintf(stderr, "ZOSLIB DEBUG: anonymous munmap to %p of len %zu hdr: %p [%lx]\n", addr, len, hdr, hdr->eye_catcher);
++  if (dbgmmap) {
++    dprintf(stderr, "ZOSLIB DEBUG: anonymous munmap to %p of len %zu hdr: %p [%lx]\n", addr, len, hdr, hdr->eye_catcher);
 +  }
 +  if ((addr != NULL) && (hdr->eye_catcher == MMAPUMAP) && (hdr->stg_len < len + PAGE_SIZE)) {
-+    // This is safe to free - full unmap of map'ed storage
++    // This is safe to free - full unmap of map'ed storage pages
 +    free(hdr->stg);
 +    return 0;
 +  }
++
 +  // do not free storage - it could be unmapping just 'part' of the mapped storage - memory leak..
-+  if (dbgmmap > 0) {
-+    fprintf(stderr, "ZOSLIB DEBUG: anonymous munmap - unable to safely free storage for %p len %zu\n", addr, len);
++  // it would be nice to have this as an 'info' instead of just 'verbose'
++  if (dbgmmap) {
++    dprintf(stderr, "ZOSLIB DEBUG: anonymous munmap - unable to safely free storage for %p len %zu\n", addr, len);
 +  }
 +  return 0;
  }
