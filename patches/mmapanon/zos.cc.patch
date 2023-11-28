@@ -1,5 +1,5 @@
 diff --git a/src/zos.cc b/src/zos.cc
-index 00ff7b0..f0acdc0 100644
+index 00ff7b0..fff29f7 100644
 --- a/src/zos.cc
 +++ b/src/zos.cc
 @@ -626,6 +626,9 @@ unsigned long __clock(void) {
@@ -49,16 +49,16 @@ index 00ff7b0..f0acdc0 100644
  
 -int anon_munmap(void *addr, size_t len) {
 -  return __zfree(addr, len);
-+static int dbgmmaprequested() {
++static bool dbgmmaprequested() {
 +  char* dbgset = getenv("ZOSLIB_DEBUG_MMAP");
 +  if (!dbgset) {
-+    return 0;
++    return false;
 +  }
 +  if (!strcmp(dbgset, "1") || !strcmp(dbgset, "Y") || !strcmp(dbgset, "y")) {
 +    __setdebug(1);
-+    return 1;
++    return true;
 +  } else {
-+    return 0;
++    return false;
 +  }
 +}
 +static int dbgmmap = dbgmmaprequested();
