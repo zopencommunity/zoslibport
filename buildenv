@@ -4,7 +4,7 @@ ZOSLIB_VERSION="4.0.0"
 export ZOPEN_BUILD_LINE="DEV"
 export ZOPEN_DEV_URL="https://github.com/ibmruntimes/zoslib.git"
 export ZOPEN_DEV_DEPS="make cmake git coreutils"
-export ZOPEN_DEV_BRANCH="zopen"
+export ZOPEN_DEV_BRANCH="main"
 export ZOPEN_DONT_ADD_ZOSLIB_DEP=1 # zoslib cannot currently build with itself
 
 export ZOPEN_CONFIGURE="cmake"
