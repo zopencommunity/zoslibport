@@ -19,6 +19,7 @@ export ZOPEN_CHECK="../build/test/cctest_a"
 
 export ZOPEN_INSTALL="cmake"
 export ZOPEN_INSTALL_OPTS="--install ../build"
+export ZOPEN_COMP=CLANG
 
 export ZOPEN_CLEAN=zoslib_clean
 
