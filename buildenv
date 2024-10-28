@@ -2,6 +2,7 @@
 ZOSLIB_VERSION="4.0.1"
 
 export ZOPEN_BUILD_LINE="DEV"
+export ZOPEN_CATEGORIES="library"
 export ZOPEN_DEV_URL="https://github.com/ibmruntimes/zoslib.git"
 export ZOPEN_DEV_DEPS="make cmake git coreutils"
 export ZOPEN_DEV_BRANCH="zopen2" # use the zopen experimental branch until it is merged in
