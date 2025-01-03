@@ -11,7 +11,7 @@ node('linux')
                  // Poll changes from upstream
                  checkout([
                         $class: 'GitSCM',
-                        branches: [[name: '*/main']],
+                        branches: [[name: '*/zopen2']],
                         doGenerateSubmoduleConfigurations: false,
                         extensions: [],
                         userRemoteConfigs: [[url: "https://github.com/ibmruntimes/zoslib.git"]]])
