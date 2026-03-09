@@ -1,0 +1,123 @@
+diff --git a/include/limits.h b/include/limits.h
+index dba6f4a..048effd 100644
+--- a/include/limits.h
++++ b/include/limits.h
+@@ -19,4 +19,13 @@
+ #define NAME_MAX 255
+ #endif
+ 
++/* z/OS system headers define TTY_NAME_MAX as 9 (POSIX minimum), which is
++ * insufficient for actual PTY device paths like "/dev/pts/123".
++ * Redefine to a safe value for applications using this constant. */
++
++#ifdef TTY_NAME_MAX
++#undef TTY_NAME_MAX
++#endif
++#define TTY_NAME_MAX 128
++
+ #endif
+diff --git a/include/pty.h b/include/pty.h
+index 5e68e19..b36af01 100644
+--- a/include/pty.h
++++ b/include/pty.h
+@@ -11,6 +11,7 @@
+ 
+ #include "zos-macros.h"
+ #include <termios.h>
++#include <sys/ioctl.h>
+ 
+ #ifdef __cplusplus
+ extern "C" {
+diff --git a/latex/refman.tex b/latex/refman.tex
+index f29d40d..1d9706a 100644
+--- a/latex/refman.tex
++++ b/latex/refman.tex
+@@ -137,9 +137,9 @@
+     \fi
+   }
+   \makeatother
+-  \doxynewunicodechar{Ã¢ÂÂ»}{${}^{-}$}% Superscript minus
+-  \doxynewunicodechar{ÃÂ²}{${}^{2}$}% Superscript two
+-  \doxynewunicodechar{ÃÂ³}{${}^{3}$}% Superscript three
++  \doxynewunicodechar{ÃÂ¢ÃÂÃÂ»}{${}^{-}$}% Superscript minus
++  \doxynewunicodechar{ÃÂÃÂ²}{${}^{2}$}% Superscript two
++  \doxynewunicodechar{ÃÂÃÂ³}{${}^{3}$}% Superscript three
+   % Hyperlinks
+     % Hyperlinks (required, but should be loaded last)
+     \ifpdf
+diff --git a/src/zos-pty.c b/src/zos-pty.c
+index 572fb52..73cf69e 100644
+--- a/src/zos-pty.c
++++ b/src/zos-pty.c
+@@ -9,18 +9,16 @@
+ #define _AE_BIMODAL 1
+ 
+ #include "zos-base.h"
+-#include <fcntl.h>
+-#include <sys/ioctl.h>
+-#include <termios.h>
+-
+ #include <errno.h>
++#include <fcntl.h>
++#include <limits.h>
++#include <pty.h>
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
+ #include <sys/ioctl.h>
+ #include <termios.h>
+ #include <unistd.h>
+-#include <pty.h>
+ 
+ int openpty(int *master, int *slave, char *name, const struct termios *termp,
+             const struct winsize *winp) {
+@@ -60,8 +58,8 @@ int openpty(int *master, int *slave, char *name, const struct termios *termp,
+   /* Note: Ensure that the caller provides a buffer large enough to hold the
+    * name. */
+   if (name) {
+-    strncpy(name, slave_name, 128);
+-    name[127] = '\0'; // Ensure null-termination
++    strncpy(name, slave_name, TTY_NAME_MAX);
++    name[TTY_NAME_MAX - 1] = '\0'; // Ensure null-termination
+   }
+ 
+   /* Open the slave pty device */
+@@ -94,11 +92,16 @@ int openpty(int *master, int *slave, char *name, const struct termios *termp,
+ }
+ 
+ static int login_tty(int fd) {
+-  setsid();
++  if (setsid() == -1) {
++    return -1;
++  }
++
++  if (dup2(fd, STDIN_FILENO) == -1 ||
++      dup2(fd, STDOUT_FILENO) == -1 ||
++      dup2(fd, STDERR_FILENO) == -1) {
++    return -1;
++  }
+ 
+-  dup2(fd, STDIN_FILENO);
+-  dup2(fd, STDOUT_FILENO);
+-  dup2(fd, STDERR_FILENO);
+   if (fd > STDERR_FILENO) {
+     close(fd);
+   }
+@@ -121,11 +124,15 @@ pid_t forkpty(int *amaster, char *name, const struct termios *termp,
+     return -1;
+   case 0:
+     close(master);
+-    login_tty(slave);
++    if (login_tty(slave) == -1) {
++      _exit(1);
++    }
+     return 0;
+   default:
+     close(slave);
+-    *amaster = master;
++    if (amaster) {
++      *amaster = master;
++    }
+     return pid;
+   }
+ }
