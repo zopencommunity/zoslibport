@@ -1,9 +1,9 @@
-# bump: zoslib-version /ZOSLIB_VERSION="(.*)"/ https://github.com/ibmruntimes/zoslib.git|semver:*
+# bump: zoslib-version /ZOSLIB_VERSION="(.*)"/ https://github.com/zopencommunity/zoslib.git|semver:*
 ZOSLIB_VERSION="4.0.1"
 
 export ZOPEN_BUILD_LINE="DEV"
 export ZOPEN_CATEGORIES="library"
-export ZOPEN_DEV_URL="https://github.com/ibmruntimes/zoslib.git"
+export ZOPEN_DEV_URL="https://github.com/zopencommunity/zoslib.git"
 export ZOPEN_DEV_DEPS="make cmake git coreutils"
 export ZOPEN_DEV_BRANCH="zopen2" # use the zopen experimental branch until it is merged in
 export ZOPEN_DONT_ADD_ZOSLIB_DEP=1 # zoslib cannot currently build with itself
