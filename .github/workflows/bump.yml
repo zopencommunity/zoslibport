@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
   # trigger on upstream repository tag events
   repository_dispatch:
-    types: [upstream-tag]
+    types: [upstream-release]
 jobs:
   bump:
     runs-on: ubuntu-latest
