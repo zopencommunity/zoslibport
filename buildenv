@@ -1,10 +1,11 @@
 # bump: zoslib-version /ZOSLIB_VERSION="(.*)"/ https://github.com/zopencommunity/zoslib.git|semver:*
 ZOSLIB_VERSION="4.0.1"
 
-export ZOPEN_BUILD_LINE="DEV"
+export ZOPEN_STABLE_TAG="v${ZOSLIB_VERSION}"
+export ZOPEN_BUILD_LINE="STABLE"
 export ZOPEN_CATEGORIES="library"
-export ZOPEN_DEV_URL="https://github.com/zopencommunity/zoslib.git"
-export ZOPEN_DEV_DEPS="make cmake coreutils"
+export ZOPEN_STABLE_URL="https://github.com/zopencommunity/zoslib.git"
+export ZOPEN_STABLE_DEPS="make cmake coreutils"
 export ZOPEN_DONT_ADD_ZOSLIB_DEP=1 # zoslib cannot currently build with itself
 
 export ZOPEN_CONFIGURE="cmake"

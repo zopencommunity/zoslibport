@@ -11,6 +11,9 @@ on:
     - cron: '00 15 * * *'
   # enable manual trigger of version updates
   workflow_dispatch:
+  # trigger on upstream repository tag events
+  repository_dispatch:
+    types: [upstream-release]
 jobs:
   bump:
     runs-on: ubuntu-latest
