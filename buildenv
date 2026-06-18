@@ -53,13 +53,18 @@ if [ ! -z "\$ZOPEN_IN_ZOPEN_BUILD" ]; then
   export ZOPEN_EXTRA_CFLAGS="\${ZOPEN_EXTRA_CFLAGS} -isystem \$PWD/include"
   export ZOPEN_EXTRA_CXXFLAGS="\${ZOPEN_EXTRA_CXXFLAGS} -isystem \$PWD/include"
   export ZOPEN_EXTRA_LDFLAGS="\${ZOPEN_EXTRA_LDFLAGS} -L\$PWD/lib"
-  export ZOPEN_EXTRA_LIBS="\${ZOPEN_EXTRA_LIBS} -lzoslib \$PWD/lib/celquopt.s.o -lzoslib-supp"
+  export ZOPEN_EXTRA_LIBS="\${ZOPEN_EXTRA_LIBS} -lzoslib \$PWD/lib/celquopt.s.o -lzoslib-supp \${ZOSLIB_HOOK_OBJ}"
   if [[ "\$ZOPEN_COMP" == "XLCLANG" ]]; then
     export ZOPEN_EXTRA_CFLAGS="\${ZOPEN_EXTRA_CFLAGS} -qinclude=\$PWD/include/zos-v2r5-symbolfixes.h"
     export ZOPEN_EXTRA_CXXFLAGS="\${ZOPEN_EXTRA_CXXFLAGS} -qinclude=\$PWD/include/zos-v2r5-symbolfixes.h"
   else
     export ZOPEN_EXTRA_CFLAGS="\${ZOPEN_EXTRA_CFLAGS} -include \$PWD/include/zos-v2r5-symbolfixes.h"
     export ZOPEN_EXTRA_CXXFLAGS="\${ZOPEN_EXTRA_CXXFLAGS} -include \$PWD/include/zos-v2r5-symbolfixes.h"
+  fi
+  if [ "\${ZOPEN_INSTRUMENT}" = "1" ]; then
+    export ZOPEN_EXTRA_CPPFLAGS="\${ZOPEN_EXTRA_CPPFLAGS} -DZOSLIB_INSTRUMENTATION"
+    export ZOPEN_EXTRA_CFLAGS="\${ZOPEN_EXTRA_CFLAGS} -finstrument-functions"
+    export ZOPEN_EXTRA_CXXFLAGS="\${ZOPEN_EXTRA_CXXFLAGS} -finstrument-functions"
   fi
 fi
 ZZ
